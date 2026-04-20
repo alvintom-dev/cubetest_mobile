@@ -18,6 +18,7 @@ This file defines strict architecture rules for generating and modifying Flutter
 
 # 📁 PROJECT STRUCTURE (MANDATORY)
 
+```
 lib/
 ├── main.dart
 ├── app.dart
@@ -30,6 +31,7 @@ lib/
 ├── shared/
 ├── services/
 └── config/
+```
 
 ---
 
@@ -37,6 +39,7 @@ lib/
 
 Every feature MUST follow this structure:
 
+```
 features/<feature_name>/
 ├── data/
 │   ├── models/
@@ -52,6 +55,7 @@ features/<feature_name>/
     ├── pages/
     ├── widgets/
     └── state/
+```
 
 ---
 
