@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(gh api *)",
-      "Bash(python3 -c \"import json,sys; [print\\(x['name']\\) for x in json.load\\(sys.stdin\\)]\")"
+      "Bash(python3 -c \"import json,sys; [print\\(x['name']\\) for x in json.load\\(sys.stdin\\)]\")",
+      "Bash(flutter analyze *)",
+      "Bash(flutter test *)",
+      "Bash(dart run *)",
+      "Bash(flutter pub *)",
+      "Bash(grep -E \"features/\\(test_set|test\\)$\")",
+      "Bash(grep -E \"\\\\.dart$\")",
+      "Bash(xargs find *)",
+      "Bash(xargs ls *)"
     ]
   }
 }

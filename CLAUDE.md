@@ -84,7 +84,7 @@ ONLY business logic:
 ## 💾 data/
 ONLY data handling:
 - API calls - remote_datasource
-- Local database logic - local_datasource
+- Local database logic - local_datasource - injectable
 - Repository implementations (follow `<repository>_impl.dart` naming format)
 - Data models (DTOs)
 
@@ -478,15 +478,73 @@ Either<Failure, T>
 ---
 
 # ⏳ LOADING STATE RULE
-## 📌 Rules
-Every async Cubit action MUST:
-- Emit loading state first
-- Then success OR failure
 
-## 📌 Flow
+## 📌 Rules
+Every async Cubit action MUST follow a strict state flow:
+- Emit Loading state first
+- Then emit Success, Error, or Empty state
+- Applies to all async operations (API, DB, cache, etc.)
+
+## 📌 Standard Flow (General)
 ```
 Initial → Loading → Success / Error
 ```
+
+## 📌 Flow (List-Based Screens)
+For any feature involving list data (e.g. tests, sites, test sets):
+```
+Initial → Loading → Success (data) / Empty / Error
+```
+
+## 📌 State Definitions
+### 🟡 Loading
+- Data is being fetched
+- UI should show loading indicator
+
+### 🟢 Success
+- Data is successfully loaded
+- List contains 1 or more items
+
+### ⚪ Empty Data (loadedNoData)
+- Request succeeded
+- BUT no data is available
+
+Example:
+- empty test list
+- no sites found
+
+👉 Must use explicit state:
+```
+LoadedNoDataState
+```
+
+### 🔴 Error
+- Request failed
+- Exception converted to Failure
+- UI should show error message + retry option
+
+## 📌 Example Flow (List Feature)
+```
+Initial
+↓
+Loading
+↓
+LoadedData (items exist)
+OR
+LoadedNoData (empty list)
+OR
+Error
+```
+
+📌 Rules
+- ❌ DO NOT return empty list inside Success state
+- ❌ DO NOT treat empty data as Success
+- ❌ DO NOT skip Loading state
+- ✅ ALWAYS explicitly handle Empty state for lists
+- ✅ Error MUST come from Failure mapping only
+
+🧠 Design Principle
+- “Empty is not success — it is a valid state that must be handled explicitly.”
 
 ---
 
@@ -853,6 +911,89 @@ When starting any new feature or task:
 3. Implement feature step-by-step
 4. Never generate full app in one pass
 5. For read-only features with no local storage, local_datasource may be omitted with approval
+
+---
+
+# ✅ ANALYZE & TEST RULE (MANDATORY)
+
+Every code change MUST be verified by the analyzer and the test suite before a task is considered complete.
+
+## 📌 Rules
+
+- `flutter analyze` MUST pass with **zero issues** (no errors, no warnings, no infos).
+- All tests MUST pass — **zero failing, zero skipped**.
+- A task is NOT complete until BOTH the analyzer AND the full suite return clean.
+
+## 📌 Test Execution Workflow (STRICT)
+
+Tests MUST be run in **two stages**: targeted first, then full.
+
+### 🎯 Stage 1 — Targeted Tests (during iteration)
+
+While implementing or fixing a change, run ONLY the tests related to the code you touched. Fast feedback loop, lower cost.
+
+Scope the run to the feature / file / directory you are actively changing:
+
+```bash
+# single test file
+flutter test test/features/site/domain/usecases/create_site_usecase_test.dart
+
+# single feature (all tests under a directory)
+flutter test test/features/site
+
+# a layer within a feature
+flutter test test/features/site/domain
+flutter test test/features/site/presentation/blocs
+
+# filter by test name
+flutter test --name "emits [Loading, LoadedData]"
+```
+
+Rules for targeted runs:
+- Targeted tests MUST pass before moving to Stage 2.
+- Targeted scope MUST cover **every** file you modified (usecase edit → run that usecase's test + its cubit's test; entity edit → run all tests in that feature).
+- Targeted runs are for speed, NOT for narrowing coverage to hide failures elsewhere.
+
+### 🧪 Stage 2 — Full Suite (before marking done)
+
+Once targeted tests are green, run the ENTIRE suite to catch cross-feature regressions:
+
+```bash
+flutter analyze
+flutter test
+```
+
+Rules for the full run:
+- MUST be executed before declaring any task complete — no exceptions.
+- MUST be re-run after every additional edit (however small) made after a previous full run.
+- If ANY test outside your targeted scope fails, treat it as part of your change — investigate and fix before completing the task.
+
+## 📌 Overall Flow
+
+```
+make change
+  ↓
+targeted tests   ← fast feedback (Stage 1)
+  ↓ green
+flutter analyze  ← zero issues
+  ↓ clean
+flutter test     ← full suite, all green (Stage 2)
+  ↓ green
+task complete
+```
+
+## 🚫 FORBIDDEN
+
+You MUST NOT:
+- Mark a task as done while `flutter analyze` reports any issue.
+- Mark a task as done after running ONLY targeted tests — full `flutter test` is mandatory.
+- Mark a task as done while any test is failing or skipped (targeted OR full).
+- Suppress analyzer issues with `// ignore:` comments just to make analyze pass — fix the root cause instead (exceptions require explicit approval).
+- Delete, comment out, or `skip:` tests to make the suite pass.
+- Claim success without actually running both the targeted AND full stages.
+
+## 🧠 DESIGN PRINCIPLE
+Targeted tests give speed, the full suite gives safety — both are required. "Green analyze + green full suite" is the definition of done.
 
 ---
 
